@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Emotion Recognition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- WaveSurfer.js CDN -->
+    <script src="https://unpkg.com/wavesurfer.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.1);
+            border-left-color: #2563eb;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        .dark-bg {
+            background: #0e1729;
+        }
+        .dark-input {
+            background: #1e293b; color: #fff;
+        }
+        .dark-border {
+            border-color: #334155;
+        }
+    </style>
+</head>
+
+<body class="bg-[#0e1729] min-h-screen flex items-center justify-center p-4 text-gray-100">
+
+    <div class="bg-[#15213b] w-full max-w-2xl shadow-2xl rounded-2xl p-8 transition-all">
+
+        <h1 class="text-3xl font-bold text-center text-blue-300">Speech Emotion Recognition</h1>
+        <p class="text-center text-gray-400 mt-2 mb-8">
+            Upload or record audio to detect emotion.
+        </p>
+
+        <div class="mb-6">
+            <label for="audio-upload" class="block text-lg font-semibold text-gray-300 mb-3">
+                1. Input Audio
+            </label>
+            <div class="flex flex-col md:flex-row gap-4">
+                <!-- File Upload -->
+                <label for="audio-upload"
+                    class="flex-1 flex flex-col items-center justify-center h-32 px-4 py-6 bg-[#1e293b] dark-input rounded-lg border-2 dark-border border-dashed cursor-pointer hover:bg-[#233657] transition">
+                    <div class="flex flex-col items-center justify-center">
+                        <svg class="w-10 h-10 text-blue-400" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M12 15l-3-3m0 0l3-3m-3 3h12">
+                            </path>
+                        </svg>
+                        <p class="mt-2 text-sm text-gray-400">
+                            <span class="font-semibold">Click to upload</span> or drag & drop
+                        </p>
+                        <p class="text-xs text-gray-500">WAV, MP3, or M4A</p>
+                    </div>
+                    <input id="audio-upload" type="file" class="hidden" accept="audio/*">
+                </label>
+                <!-- Microphone Recorder -->
+                <button id="record-btn"
+                    class="flex-1 bg-blue-800 text-white font-semibold py-3 rounded-lg border-2 dark-border border-blue-500 hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex flex-col items-center justify-center gap-2">
+                    <svg id="mic-icon" class="w-8 h-8 text-white" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 18v2m0 0h3m-3 0a7 7 0 01-7-7V10a5 5 0 0110 0v3a7 7 0 01-7 7z" />
+                        <circle cx="12" cy="11" r="4" stroke="white" stroke-width="2" fill="none"/>
+                    </svg>
+                    <span id="record-label">Record Audio</span>
+                    <span id="record-timer" class="text-xs text-gray-400"></span>
+                </button>
+            </div>
+            <p id="file-name" class="text-center text-sm text-gray-400 mt-3 h-5"></p>
+        </div>
+
+        <!-- Waveform Display & Playback -->
+        <div id="waveform-container" class="w-full my-6 hidden">
+            <div id="waveform" class="bg-[#22304c] rounded-lg mb-2" style="height:70px;"></div>
+            <div class="flex items-center gap-4">
+                <button id="play-btn" class="bg-blue-700 text-white px-4 py-2 rounded-lg focus:outline-none">Play/Pause</button>
+                <span id="audio-duration" class="text-gray-400 text-sm"></span>
+            </div>
+        </div>
+
+        <div class="mb-8">
+            <button id="analyze-btn"
+                class="w-full bg-blue-700 text-white text-lg font-bold py-3 px-6 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all transform hover:scale-102 disabled:opacity-50 disabled:cursor-not-allowed">
+                2. Analyze Emotion
+            </button>
+        </div>
+
+        <div>
+            <h2 class="text-lg font-semibold text-gray-300 mb-3">
+                3. Analysis & Results
+            </h2>
+            <div id="status-area" class="bg-[#101828] text-white rounded-lg p-6 min-h-[250px] overflow-hidden">
+                <div id="initial-state" class="flex flex-col items-center justify-center h-full text-gray-400">
+                    <svg class="w-12 h-12 mb-3" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 19V6l11 0"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 19V6l11 0"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M5 19V6l11 0"></path>
+                    </svg>
+                    <p class="font-medium">Waiting for audio input...</p>
+                    <p class="text-sm">Upload or record, then analyze.</p>
+                </div>
+                <div id="processing-state" class="hidden">
+                    <div class="flex items-center mb-4">
+                        <div class="spinner mr-4"></div>
+                        <span id="processing-title" class="text-xl font-medium text-blue-200">Analyzing...</span>
+                    </div>
+                    <ul id="processing-steps" class="space-y-2 font-mono text-sm text-gray-300"></ul>
+                </div>
+                <div id="result-state" class="hidden">
+                    <div class="text-center">
+                        <p class="text-gray-400 font-medium mb-4">Analysis Complete!</p>
+                        <div id="result-emoji" class="text-8xl mb-4"></div>
+                        <h3 class="text-4xl font-bold" id="result-text"></h3>
+                        <p class="text-lg text-blue-300 mt-2" id="result-confidence"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="message-box"
+        class="hidden fixed top-5 right-5 bg-red-600 text-white py-3 px-5 rounded-lg shadow-lg">
+        <span id="message-text"></span>
+    </div>
+
+    <script>
+        const audioUpload = document.getElementById('audio-upload');
+        const fileNameDisplay = document.getElementById('file-name');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const statusArea = document.getElementById('status-area');
+        const initialState = document.getElementById('initial-state');
+        const processingState = document.getElementById('processing-state');
+        const processingTitle = document.getElementById('processing-title');
+        const processingSteps = document.getElementById('processing-steps');
+        const resultState = document.getElementById('result-state');
+        const resultEmoji = document.getElementById('result-emoji');
+        const resultText = document.getElementById('result-text');
+        const resultConfidence = document.getElementById('result-confidence');
+        const messageBox = document.getElementById('message-box');
+        const messageText = document.getElementById('message-text');
+        const recordBtn = document.getElementById('record-btn');
+        const recordLabel = document.getElementById('record-label');
+        const recordTimer = document.getElementById('record-timer');
+        const micIcon = document.getElementById('mic-icon');
+
+        // Waveform
+        let wavesurfer = null;
+        const waveformContainer = document.getElementById('waveform-container');
+        const playBtn = document.getElementById('play-btn');
+        const audioDuration = document.getElementById('audio-duration');
+
+        const API_URL = "http://127.0.0.1:5000/predict";
+        const EMOTION_EMOJIS = {"Happy":"😀","Sad":"😢","Angry":"😡","Neutral":"😐","Fear":"😨","Disgust":"🤢","Surprise":"😮"};
+
+        let recordedBlob = null;
+        let isRecording = false;
+        let mediaRecorder = null;
+        let chunks = [];
+        let recordStartTime = 0;
+        let recordTimerInterval = null;
+
+        function msToTime(ms) {
+            const sec = Math.floor(ms / 1000) % 60;
+            const min = Math.floor(ms / 60000);
+            return `${min}:${sec.toString().padStart(2, '0')}`;
+        }
+        function showMessage(message) {
+            messageText.textContent = message;
+            messageBox.classList.remove('hidden');
+            setTimeout(() => { messageBox.classList.add('hidden'); }, 3000);
+        }
+        function resetStatus() {
+            initialState.style.display = 'flex'; processingState.style.display = 'none';
+            resultState.style.display = 'none'; processingSteps.innerHTML = '';
+            analyzeBtn.disabled = false; analyzeBtn.textContent = "2. Analyze Emotion";
+        }
+        audioUpload.addEventListener('change', () => {
+            resetStatus();
+            waveformContainer.classList.add('hidden');
+            if (audioUpload.files.length > 0) {
+                fileNameDisplay.textContent = audioUpload.files[0].name;
+                recordedBlob = null;
+                showWaveform(audioUpload.files[0]);
+            }
+        });
+        analyzeBtn.addEventListener('click', () => {
+            if (audioUpload.files.length === 0 && !recordedBlob) {
+                showMessage("Please upload or record an audio file first.");
+                return;
+            }
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = "Analyzing...";
+            if (audioUpload.files.length > 0) {
+                processAudioFile(audioUpload.files[0]);
+            } else if (recordedBlob) {
+                processAudioFile(recordedBlob, "recorded_audio.wav");
+            }
+        });
+
+        recordBtn.addEventListener('click', async () => {
+            if (!isRecording) {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    showMessage("Microphone not supported.");
+                    return;
+                }
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    chunks = [];
+                    isRecording = true;
+                    recordedBlob = null;
+                    recordTimerInterval && clearInterval(recordTimerInterval);
+                    recordStartTime = Date.now();
+                    recordLabel.textContent = "Stop Recording";
+                    micIcon.classList.add('text-red-400');
+                    recordTimerInterval = setInterval(() => {
+                        const elapsed = Date.now() - recordStartTime;
+                        recordTimer.textContent = msToTime(elapsed);
+                    }, 200);
+                    resetStatus();
+                    fileNameDisplay.textContent = "Recording...";
+                    mediaRecorder.start();
+                    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+                    mediaRecorder.onstop = () => {
+                        isRecording = false;
+                        recordedBlob = new Blob(chunks, { type: 'audio/wav' });
+                        fileNameDisplay.textContent = "Recorded audio ready";
+                        recordLabel.textContent = "Record Audio";
+                        micIcon.classList.remove('text-red-400');
+                        clearInterval(recordTimerInterval);
+                        recordTimer.textContent = '';
+                        // Show waveform for recorded audio
+                        handleRecordingComplete(recordedBlob);
+                    };
+                } catch (err) {
+                    showMessage("Microphone access denied.");
+                }
+            } else {
+                // Stop recording
+                isRecording = false;
+                recordLabel.textContent = "Record Audio";
+                micIcon.classList.remove('text-red-400');
+                recordTimerInterval && clearInterval(recordTimerInterval);
+                recordTimer.textContent = '';
+                mediaRecorder && mediaRecorder.stop();
+            }
+        });
+
+        function handleRecordingComplete(blob) {
+            waveformContainer.classList.add('hidden');
+            if (blob) {
+                showWaveform(blob);
+            }
+        }
+
+        // --- WAVESURFER HANDLING ---
+        function showWaveform(blobOrFile) {
+            waveformContainer.classList.remove('hidden');
+
+            // Clean up previous instance if any
+            if (wavesurfer) {
+                wavesurfer.destroy();
+                wavesurfer = null;
+            }
+
+            wavesurfer = WaveSurfer.create({
+                container: '#waveform',
+                waveColor: '#38bdf8',
+                progressColor: '#2563eb',
+                height: 70,
+                barWidth: 2,
+                cursorColor: '#fff',
+                backgroundColor: '#22304c'
+            });
+
+            const fileURL = URL.createObjectURL(blobOrFile);
+            wavesurfer.load(fileURL);
+
+            wavesurfer.on('ready', () => {
+                let dur = wavesurfer.getDuration();
+                audioDuration.textContent = "Duration: " + dur.toFixed(2) + "s";
+            });
+
+            playBtn.onclick = () => {
+                if (wavesurfer) {
+                    wavesurfer.playPause();
+                }
+            };
+        }
+
+        async function processAudioFile(fileOrBlob, filename) {
+            initialState.style.display = 'none';
+            resultState.style.display = 'none';
+            processingState.style.display = 'block';
+            processingTitle.textContent = 'Connecting to Python...';
+            processingSteps.innerHTML = '';
+            const formData = new FormData();
+            if (fileOrBlob instanceof Blob && filename)
+                formData.append('audio_file', fileOrBlob, filename);
+            else
+                formData.append('audio_file', fileOrBlob);
+
+            processingSteps.innerHTML += '<li>[1/4] Uploading audio to server...</li>';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+                processingTitle.textContent = 'Analyzing...';
+                if (!response.ok) {
+                    let errorData = null;
+                    try { errorData = await response.json(); } catch (e) {}
+                    throw new Error(errorData?.error || `Server error: ${response.status}`);
+                }
+                const data = await response.json();
+                processingSteps.innerHTML += '<li class="text-green-400">[✓] Step 2: Server extracted features (MFCCs, etc.)</li>';
+                processingSteps.innerHTML += '<li class="text-green-400">[✓] Step 3: Server ran RNN model</li>';
+                processingSteps.innerHTML += '<li class="text-green-400">[✓] Step 4: Receiving prediction...</li>';
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                processingState.style.display = 'none';
+                resultState.style.display = 'block';
+                const emotion = data.emotion;
+                const confidence = (data.confidence * 100).toFixed(1);
+                resultEmoji.textContent = EMOTION_EMOJIS[emotion] || '🤔';
+                resultText.textContent = emotion;
+                resultConfidence.textContent = `(Confidence: ${confidence}%)`;
+            } catch (error) {
+                console.error("Analysis failed:", error);
+                if (error.message.includes('Failed to fetch')) {
+                    showMessage("Error: Could not connect to Python backend.");
+                    processingSteps.innerHTML += '<li class="text-red-400">[X] Failed to connect to server at http://127.0.0.1:5000</li>';
+                    processingSteps.innerHTML += '<li class="text-yellow-300">Is the `app.py` server running?</li>';
+                } else {
+                    showMessage(`Error: ${error.message}`);
+                }
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = "2. Analyze Emotion";
+                processingTitle.textContent = 'Error';
+            }
+        }
+        // Dark mode on initial load
+        document.body.classList.add('dark-bg');
+    </script>
+</body>
+</html>
