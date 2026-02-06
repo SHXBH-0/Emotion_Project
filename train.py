@@ -4,9 +4,9 @@ import pandas as pd
 import librosa
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
-from tensorflow.keras.models import Sequential # type: ignore
-from tensorflow.keras.layers import Dense, LSTM, Dropout, BatchNormalization # type: ignore
-from tensorflow.keras.callbacks import ModelCheckpoint # type: ignore
+from keras.models import Sequential 
+from keras.layers import Dense, LSTM, Dropout, BatchNormalization 
+from keras.callbacks import ModelCheckpoint 
 
 print("--- Starting Model Training Script ---")
 
